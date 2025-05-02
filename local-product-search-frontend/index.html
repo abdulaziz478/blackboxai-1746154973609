@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pencari Produk Lokal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet" />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+  />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<link rel="manifest" href="manifest.json" />
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("service-worker.js").then(
+        function (registration) {
+          console.log("ServiceWorker registration successful with scope: ", registration.scope);
+        },
+        function (err) {
+          console.log("ServiceWorker registration failed: ", err);
+        }
+      );
+    });
+  }
+</script>
+<body class="bg-gray-50 font-inter min-h-screen flex flex-col">
+  <header class="bg-white shadow p-4 flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-800">Pencari Produk Lokal</h1>
+    <button id="btn-locate" class="text-blue-600 hover:text-blue-800 focus:outline-none">
+      <i class="fas fa-location-arrow"></i> Temukan Produk di Sekitarmu
+    </button>
+  </header>
+
+  <main class="flex-grow container mx-auto p-4">
+    <section>
+      <input
+        type="text"
+        id="search-input"
+        placeholder="Cari produk..."
+        class="w-full p-2 border border-gray-300 rounded mb-4"
+      />
+    </section>
+
+    <section id="product-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <!-- Product cards will be inserted here -->
+    </section>
+  </main>
+
+  <footer class="bg-white shadow p-4 text-center text-gray-600">
+    &copy; 2024 Pencari Produk Lokal. Mendukung Usaha Kecil dan Ekonomi Lokal.
+  </footer>
+
+  <script>
+    let userLocation = null;
+
+    function haversineDistance(coords1, coords2) {
+      function toRad(x) {
+        return (x * Math.PI) / 180;
+      }
+
+      const R = 6371; // km
+      const dLat = toRad(coords2.lat - coords1.lat);
+      const dLon = toRad(coords2.lng - coords1.lng);
+      const lat1 = toRad(coords1.lat);
+      const lat2 = toRad(coords2.lat);
+
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    async function fetchProducts(query = "", location = null, radius = 50) {
+      let url = new URL("http://localhost:3000/api/products");
+      if (query) {
+        url.searchParams.append("q", query);
+      }
+      if (location) {
+        url.searchParams.append("lat", location.lat);
+        url.searchParams.append("lng", location.lng);
+        url.searchParams.append("radius", radius);
+      }
+
+      try {
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        const products = await response.json();
+        return products;
+      } catch (error) {
+        alert("Gagal mengambil data produk: " + error.message);
+        return [];
+      }
+    }
+
+    async function renderProducts(filteredProducts) {
+      const productList = document.getElementById("product-list");
+      productList.innerHTML = "";
+
+      if (filteredProducts.length === 0) {
+        productList.innerHTML = "<p class='text-center col-span-full'>Produk tidak ditemukan.</p>";
+        return;
+      }
+
+      filteredProducts.forEach((product) => {
+        const distanceText =
+          product.distance !== undefined && product.distance !== null
+            ? product.distance.toFixed(1) + " km dari lokasi Anda"
+            : "";
+
+        const card = document.createElement("div");
+        card.className =
+          "bg-white p-4 rounded shadow hover:shadow-lg transition-shadow cursor-pointer";
+
+        card.innerHTML = `
+          <h2 class="text-lg font-semibold mb-2">${product.name}</h2>
+          <p class="text-gray-600 mb-2">${product.description}</p>
+          <p class="text-sm text-gray-500">${distanceText}</p>
+        `;
+
+        productList.appendChild(card);
+      });
+    }
+
+    async function filterProducts(query) {
+      const products = await fetchProducts(query, userLocation);
+      renderProducts(products);
+    }
+
+    document.getElementById("search-input").addEventListener("input", (e) => {
+      filterProducts(e.target.value);
+    });
+
+    document.getElementById("btn-locate").addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        alert("Geolocation tidak didukung oleh browser Anda.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          await filterProducts(document.getElementById("search-input").value);
+        },
+        () => {
+          alert("Gagal mendapatkan lokasi Anda.");
+        }
+      );
+    });
+
+    // Initial render
+    filterProducts("");
+  </script>
+</body>
+</html>
