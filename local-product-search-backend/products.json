@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "name": "Kerajinan Anyaman Bambu",
+    "description": "Produk anyaman bambu khas daerah kami.",
+    "location": { "lat": -6.200000, "lng": 106.816666 }
+  },
+  {
+    "id": 2,
+    "name": "Madu Hutan Asli",
+    "description": "Madu alami dari hutan lokal.",
+    "location": { "lat": -6.914744, "lng": 107.609810 }
+  },
+  {
+    "id": 3,
+    "name": "Batik Tulis",
+    "description": "Batik tulis tradisional dengan motif unik.",
+    "location": { "lat": -7.250445, "lng": 112.768845 }
+  }
+]
